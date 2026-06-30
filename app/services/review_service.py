@@ -1,3 +1,5 @@
+from app.llm.llm_service import LLMService
+
 from app.models.review_models import (
     ReviewRequest,
     ReviewResponse,
@@ -8,24 +10,15 @@ class ReviewService:
 
     @staticmethod
     def review_code(
-        request: ReviewRequest
+        request: ReviewRequest,
     ) -> ReviewResponse:
 
-        code = request.code.lower()
+        llm = LLMService()
 
-        if "print" in code:
+        review = llm.review_code(
+            request.code
+        )
 
-            review = (
-                "Code looks good.\n\n"
-                "Suggestion:\n"
-                "- Consider replacing print() with the logging module in production applications."
-            )
-
-        else:
-
-            review = (
-                "Code received successfully.\n\n"
-                "AI review will be available once Gemini is integrated."
-            )
-
-        return ReviewResponse(review=review)
+        return ReviewResponse(
+            review=review
+        )
