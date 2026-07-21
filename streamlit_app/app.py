@@ -1,78 +1,94 @@
-import streamlit as st
 import requests
+import streamlit as st
 
 st.set_page_config(
     page_title="AI Software Delivery Assistant",
-    layout="wide"
+    page_icon="🤖",
+    layout="wide",
 )
 
-st.title("🚀 AI Software Delivery Assistant")
-st.subheader("GitHub PR → AI Code Review")
+API_URL = "http://127.0.0.1:8000"
 
-API_BASE_URL = "http://127.0.0.1:8000"
+st.title("🤖 AI Software Delivery Assistant")
+st.caption("GitHub Pull Request AI Reviewer powered by Gemini")
 
-repo_url = st.text_input("GitHub Repository URL")
-pr_number = st.number_input("Pull Request Number", min_value=1, step=1)
+st.divider()
 
-if st.button("Analyze Pull Request"):
+repo = st.text_input(
+    "GitHub Repository",
+    placeholder="https://github.com/psf/requests",
+)
 
-    if not repo_url:
-        st.error("Please enter repository URL")
+pr = st.number_input(
+    "Pull Request Number",
+    min_value=1,
+    value=6940,
+)
+
+if st.button("🚀 Analyze Pull Request", use_container_width=True):
+
+    if repo.strip() == "":
+        st.warning("Please enter a repository URL.")
         st.stop()
 
     payload = {
-        "repository_url": repo_url,
-        "pull_request_number": int(pr_number)
+        "repository_url": repo,
+        "pull_request_number": int(pr),
     }
 
-    with st.spinner("Analyzing PR with AI..."):
+    with st.spinner("Analyzing Pull Request..."):
 
         try:
+
             response = requests.post(
-                f"{API_BASE_URL}/review/pull-request",
+                f"{API_URL}/review/pull-request",
                 json=payload,
-                timeout=60
+                timeout=180,
             )
+
+            if response.status_code != 200:
+                st.error(response.text)
+                st.stop()
 
             data = response.json()
 
         except Exception as e:
-            st.error(f"Request failed: {str(e)}")
+            st.error(str(e))
             st.stop()
-
-    # -----------------------------
-    # SAFETY CHECK (IMPORTANT FIX)
-    # -----------------------------
-    if not isinstance(data, dict):
-        st.error("Invalid response from backend")
-        st.write(data)
-        st.stop()
 
     st.success("Analysis Complete!")
 
-    # -----------------------------
-    # SUMMARY
-    # -----------------------------
-    st.header("📊 Summary")
+    st.divider()
 
-    st.metric(
-        "Overall Score",
-        data.get("overall_score", 0)
-    )
+    c1, c2 = st.columns(2)
 
-    st.write(data.get("summary", "No summary returned"))
+    with c1:
+        st.metric(
+            "Overall Score",
+            data["overall_score"],
+        )
 
-    # -----------------------------
-    # FILE REVIEWS
-    # -----------------------------
-    st.header("📁 File Reviews")
+    with c2:
+        st.metric(
+            "Files Reviewed",
+            len(data["files"]),
+        )
 
-    for file in data.get("files", []):
+    st.write(data["summary"])
 
-        with st.expander(f"📄 {file.get('filename', 'unknown')}"):
+    st.divider()
 
-            st.write("### Review")
-            st.write(file.get("review", "No review generated"))
+    for file in data["files"]:
 
-            st.write("### Status")
-            st.write(file.get("status", "unknown"))
+        with st.expander(
+            f"📄 {file['filename']}",
+            expanded=False,
+        ):
+
+            st.markdown(
+                f"**Status:** {file['status']}"
+            )
+
+            st.markdown("### AI Review")
+
+            st.markdown(file["review"])
