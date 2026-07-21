@@ -10,8 +10,9 @@ class GeminiProvider(BaseLLMProvider):
     def __init__(self):
 
         if not settings.GEMINI_API_KEY:
+
             raise ValueError(
-                "GEMINI_API_KEY not found in environment variables."
+                "Gemini API Key missing."
             )
 
         self.client = genai.Client(
@@ -20,26 +21,19 @@ class GeminiProvider(BaseLLMProvider):
 
     def generate_review(
         self,
-        code: str,
+        prompt: str,
     ) -> str:
 
-        prompt = f"""
-You are a Senior Software Engineer performing a professional code review.
+        # Gemini performs much better on shorter prompts.
+        # Protect against extremely large PRs.
+        if len(prompt) > 15000:
 
-Review the following code.
+            prompt = prompt[:15000]
 
-Provide:
-
-1. Overall assessment
-2. Code quality issues
-3. Bugs
-4. Best practice suggestions
-5. Security concerns (if any)
-
-Code:
-
-{code}
-"""
+            prompt += (
+                "\n\n"
+                "[Diff truncated due to length.]"
+            )
 
         response = self.client.models.generate_content(
             model="gemini-2.5-flash",
@@ -48,5 +42,14 @@ Code:
                 temperature=0.2,
             ),
         )
+
+        if (
+            response is None
+            or not getattr(response, "text", None)
+        ):
+
+            return (
+                "Gemini returned an empty response."
+            )
 
         return response.text

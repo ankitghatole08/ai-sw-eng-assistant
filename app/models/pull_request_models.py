@@ -9,8 +9,10 @@ class PullRequestReviewRequest(BaseModel):
 class PullRequestFile(BaseModel):
     filename: str
     status: str
-    raw_url: str | None = None
-    content: str | None = None
+
+    # NEW
+    patch: str | None = None
+
     review: str | None = None
 
 

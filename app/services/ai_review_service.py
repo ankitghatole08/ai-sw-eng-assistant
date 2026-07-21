@@ -6,22 +6,43 @@ class AIReviewService:
     def __init__(self):
         self.llm = LLMService()
 
-    def review_code(self, code: str) -> str:
+    def review_patch(
+        self,
+        filename: str,
+        patch: str,
+    ) -> str:
 
         prompt = f"""
-You are a senior software engineer.
+You are a Senior Software Engineer.
 
-Perform a detailed code review.
+You are reviewing a GitHub Pull Request.
 
-Return:
-- Issues
-- Improvements
-- Security risks
-- Best practices
-- Short summary
+The following text is a Git diff (NOT the entire file).
 
-Code:
-{code}
+Review ONLY the changes.
+
+Provide your response in Markdown.
+
+Include:
+
+## Summary
+
+## Potential Bugs
+
+## Code Quality
+
+## Best Practices
+
+## Security Concerns
+
+## Final Recommendation
+
+File:
+{filename}
+
+Git Diff:
+
+{patch}
 """
 
         return self.llm.review_code(prompt)
