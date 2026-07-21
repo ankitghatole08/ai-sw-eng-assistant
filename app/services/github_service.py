@@ -1,38 +1,76 @@
-from github import Github
-from github.GithubException import GithubException
-
-from app.models.github_models import (
-    GitHubFileRequest,
-    GitHubFileResponse,
+import httpx
+from app.core.config import settings
+from app.models.pull_request_models import (
+    PullRequestFile,
+    PullRequestFilesResponse,
 )
+from app.utils.github_utils import parse_repository_url
 
 
 class GitHubService:
 
+    BASE_URL = "https://api.github.com"
+
+    @classmethod
+    def get_pull_request_files(cls, repository_url: str, pr_number: int):
+
+        owner, repo = parse_repository_url(repository_url)
+
+        url = f"{cls.BASE_URL}/repos/{owner}/{repo}/pulls/{pr_number}/files"
+
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+
+        if settings.GITHUB_TOKEN:
+            headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
+
+        response = httpx.get(url, headers=headers, timeout=30)
+
+        if response.status_code != 200:
+            raise Exception(f"GitHub API error: {response.status_code} - {response.text}")
+
+        files = []
+
+        for item in response.json():
+
+            raw_url = item.get("raw_url")
+
+            files.append(
+                PullRequestFile(
+                    filename=item.get("filename", "unknown"),
+                    status=item.get("status", "unknown"),
+                    raw_url=raw_url,
+                    content=None,
+                    review=None,
+                )
+            )
+
+        return PullRequestFilesResponse(
+            repository=f"{owner}/{repo}",
+            pull_request_number=pr_number,
+            files=files,
+        )
+
     @staticmethod
-    def get_file(
-        request: GitHubFileRequest,
-    ) -> GitHubFileResponse:
+    def fetch_file_content(raw_url: str | None):
+
+        # 🔥 FIX: NEVER CALL HTTP IF NONE
+        if not raw_url or not isinstance(raw_url, str):
+            return None
 
         try:
+            headers = {}
 
-            github = Github()
+            if settings.GITHUB_TOKEN:
+                headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
 
-            repository = github.get_repo(
-                f"{request.owner}/{request.repository}"
-            )
+            response = httpx.get(raw_url, headers=headers, timeout=30)
 
-            file = repository.get_contents(
-                request.file_path
-            )
+            if response.status_code != 200:
+                return None
 
-            return GitHubFileResponse(
-                file_name=file.name,
-                content=file.decoded_content.decode("utf-8")
-            )
+            return response.text
 
-        except GithubException as error:
-
-            raise Exception(
-                f"GitHub Error: {error.data}"
-            )
+        except Exception:
+            return None

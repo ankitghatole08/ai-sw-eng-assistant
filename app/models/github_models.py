@@ -10,3 +10,8 @@ class GitHubFileRequest(BaseModel):
 class GitHubFileResponse(BaseModel):
     file_name: str
     content: str
+
+
+class GitHubReviewResponse(BaseModel):
+    file_name: str
+    review: str

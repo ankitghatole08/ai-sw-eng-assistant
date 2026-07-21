@@ -1,13 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from app.models.review_models import (
-    ReviewRequest,
-    ReviewResponse,
-)
-
-from app.services.review_service import (
-    ReviewService,
-)
+from app.models.pull_request_models import PullRequestReviewRequest
+from app.services.review_service import ReviewService
 
 router = APIRouter(
     prefix="/review",
@@ -15,12 +9,18 @@ router = APIRouter(
 )
 
 
-@router.post(
-    "/",
-    response_model=ReviewResponse,
-)
-def review_code(
-    request: ReviewRequest,
-):
+@router.post("/pull-request")
+def review_pull_request(request: PullRequestReviewRequest):
 
-    return ReviewService.review_code(request)
+    try:
+
+        service = ReviewService()
+
+        return service.review_pull_request(
+            repository_url=str(request.repository_url),
+            pull_request_number=request.pull_request_number,
+        )
+
+    except Exception as e:
+
+        raise HTTPException(status_code=500, detail=str(e))
